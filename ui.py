@@ -34,26 +34,47 @@ def run_scan():
         console.print("[bold red]An error occurred during scanning.[/bold red]")
         return
 
-    # Display results for each target
     for target, result in results.items():
         console.print(f"[bold green]Scan complete for {target}[/bold green]")
         if result:
+            # Show OS detection results first.
+            osmatches = result.get('osmatch', [])
+            if osmatches:
+                console.print(
+                    f"[bold]OS Detection:[/bold] {osmatches[0].get('name', 'Unknown')} "
+                    f"(Accuracy: {osmatches[0].get('accuracy', 'N/A')}%)"
+                )
+            else:
+                console.print("[bold red]OS detection unavailable or inconclusive.[/bold red]")
+
+            # Build table with additional 'Version' column.
             table = Table(title=f"Scan Results for {target}")
             table.add_column("Port", style="cyan", no_wrap=True)
             table.add_column("State", style="magenta")
             table.add_column("Service", style="green")
+            table.add_column("Version", style="yellow")
 
             tcp_results = result.get("tcp", {})
             if tcp_results:
                 for port, info in tcp_results.items():
-                    table.add_row(str(port), info.get("state", "N/A"), info.get("name", "N/A"))
+                    version_str = info.get("version", "")
+                    product_str = info.get("product", "")
+                    version_info = f"{product_str} {version_str}" if product_str or version_str else "N/A"
+                    table.add_row(
+                        str(port),
+                        info.get("state", "N/A"),
+                        info.get("name", "N/A"),
+                        version_info
+                    )
             else:
-                table.add_row("N/A", "No TCP info", "")
+                table.add_row("N/A", "No TCP info", "", "")
             console.print(table)
-            # Log results in JSON format
+
+            # Log the extended JSON including OS and service info.
             logger.log_json(result, filename_prefix=f"scan_{target.replace('.', '_')}")
         else:
             console.print(f"[bold red]No results returned from scan of {target}.[/bold red]")
+
 
 if __name__ == '__main__':
     run_scan()
