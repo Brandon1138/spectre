@@ -40,6 +40,10 @@ class StealthNmapScanner(NmapScanner):
         if ttl:
             stealth_opts += f" --ttl {ttl}"
         stealth_opts = stealth_opts.strip() or '-sS'
+        if "-sV" not in stealth_opts:
+            stealth_opts += " -sV"
+        if "-O" not in stealth_opts:
+            stealth_opts += " -O"
         super().__init__(scan_arguments=stealth_opts)
 
 if __name__ == '__main__':

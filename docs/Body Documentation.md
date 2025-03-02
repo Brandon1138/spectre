@@ -1,174 +1,70 @@
-# Network Scanner: What It Does
+# Network Scanner:
 
-The Spectre Network Scanner is a tool designed to check which devices are connected to a network and determine which services they are running. It helps users understand their network security by scanning for open ports, which are like virtual doors that allow communication between devices.
-
-This tool can be used for basic scanning to see what is active on a network, as well as for more advanced scanning that tries to avoid detection by security systems. It is useful for IT professionals, cybersecurity enthusiasts, and anyone who wants to assess network security.
+The Spectre network scanner utilises python‑nmap to perform comprehensive port scans and gather rich target data. This updated implementation not only provides basic scanning functionality but also integrates advanced OS fingerprinting, detailed service/version detection, and vulnerability analysis to flag outdated software. The document below outlines each component, its evolution, and how the new features are integrated.
 
 ---
 
-## How the Scanner Works
+## 1. Basic Scanning with python‑nmap
 
-### 1. Standard Network Scanning
+The core scanning module (`nmap_scanner.py`) leverages python‑nmap to conduct TCP scans over a specified port range. The original implementation focused on port state and basic service detection. With the recent updates, the default scan arguments now include:
+- **`-sV`**: For detailed service/version detection.
+- **`-O`**: For OS fingerprinting.
 
-- The scanner quickly checks a network for devices and identifies open ports.
-    
-- It uses a reliable scanning method that is widely recognized and trusted.
-    
-- The results are presented in an easy-to-read format.
-    
-
-### 2. Stealth Scanning
-
-Some networks have security measures that try to block or detect scans. The stealth scanning feature helps avoid detection by using techniques such as:
-
-- **Decoy Scans** – Pretending the scan is coming from multiple sources.
-    
-- **Fragmentation** – Breaking the scan into smaller pieces to go unnoticed.
-    
-- **Idle Scans** – Hiding behind another device while scanning.
-    
-- **Timing Adjustments** – Controlling how fast the scan happens to reduce suspicion.
-    
-
-These methods make it harder for security systems to detect that a scan is taking place.
+This enhancement ensures every scan returns an enriched data set with OS guesses and service version details.
 
 ---
 
-## Keeping a Record of Scans (Logging)
+## 2. Stealth Scanning Enhancements
 
-The scanner saves results so users can review them later. It records scan details in three formats:
-
-- **Plain Text** – A simple list of results for easy reading.
-    
-- **JSON** – A structured format that can be used by other programs.
-    
-- **Markdown** – A formatted document that can be opened in note-taking apps.
-    
-
-Each scan result is saved in a folder named with the current date, making it easy to organize past scans.
+Stealth scanning, implemented in `stealth_scanner.py`, allows the scanner to operate with low detection risk. Previously, stealth scans were limited to decoys, fragmentation, idle scanning, and timing adjustments. In this update, stealth scanning has been integrated with the advanced detection features:
+- Regardless of the stealth options (e.g., decoy, fragmentation), the scanner appends the `-sV -O` flags.
+- This guarantees that stealth scans produce the same rich output as standard scans, unifying data collection across modes.
 
 ---
 
-## Interactive Interface (UI)
+## 3. Vulnerability Analysis Integration
 
-Instead of typing complicated commands, users can interact with the scanner using a simple interface. The UI provides:
-
-- A text box to enter the devices to scan.
-    
-- A progress bar to show the scan’s progress.
-    
-- A table displaying results in an organized way.
-    
-- Automatic logging of results for later review.
-    
-
----
-
-## Faster Scanning with Multiple Tasks (Asynchronous Scanning)
-
-If multiple devices need to be scanned at once, the scanner can run multiple tasks simultaneously. This reduces waiting time and provides results more quickly. Instead of scanning one device at a time, the scanner handles many devices at once, making it much more efficient.
+A new module, `vulnerability_checker.py`, has been introduced to enhance operational intelligence:
+- **Version Parsing:**  
+  The module utilises regex to extract numeric components from version strings, converting them into tuples for comparison.
+- **Threshold Comparison:**  
+  Parsed versions are compared against predefined thresholds representing the latest stable releases as of March 2, 2025:
+  - **OpenSSH:** Latest stable is 9.9p2 (threshold tuple: `(9, 9, 2)`).
+  - **Apache HTTP Server:** Latest stable is 2.4.57 (threshold tuple: `(2, 4, 57)`).
+  - **MySQL:** Latest stable is 8.0.34 (threshold tuple: `(8, 0, 34)`).
+  - **NGINX:** Latest stable is 1.23.3 (threshold tuple: `(1, 23, 3)`).
+- **Alerting:**  
+  Services running versions below these thresholds are flagged as outdated. Alerts are then integrated into the UI and logged for review, giving operators actionable intelligence to prioritise remediation.
 
 ---
 
-## Error Handling & Stability
+## 4. Asynchronous Scanning & Logging
 
-If something goes wrong during a scan, the scanner logs the issue instead of stopping abruptly. It keeps track of:
+To handle multiple targets efficiently, the scanner wraps the blocking Nmap call into an asynchronous method using Python’s `asyncio`. This improvement drastically reduces overall scan time when multiple targets are provided.  
+Scan results—including the extended OS and service details—are passed to the logging module (`logger.py`), which stores output in:
+- **JSON:** For machine-readable post-scan analysis.
+- **Plaintext:** For quick manual review.
+- **Markdown:** For well-formatted documentation (ideal for knowledge bases like Obsidian).
 
-- Errors that occur during scanning.
-    
-- Devices that didn’t respond.
-    
-- Any unusual network activity detected during the scan.
-    
-
-This makes troubleshooting easier and ensures the tool remains reliable over time.
+The unified logging strategy ensures that all relevant data, including vulnerability alerts, is captured with consistent formatting and file organisation.
 
 ---
 
-## Summary
+## 5. User Interface Enhancements
 
-- The Spectre Network Scanner checks which devices and services are active on a network.
-    
-- It can perform both standard and stealth scans.
-    
-- Scan results are saved for review.
-    
-- The interactive interface makes it easy to use.
-    
-- Multiple scans can run at the same time to speed up results.
-    
-- The tool is designed to be stable and reliable, even if something goes wrong.
-    
-
-This tool is ideal for anyone who wants to explore or secure their network with minimal technical knowledge.
+The Rich-based UI (`ui.py`) has been updated to:
+- Prompt for target IP(s) and provide progress feedback during asynchronous scanning.
+- Display results in a detailed table that now includes columns for OS detection and service version details.
+- Highlight vulnerability alerts generated by the vulnerability checker.
+- Log enriched scan results automatically, ensuring that all extended data is available for later review.
 
 ---
 
-## Annex: Technical Overview
+## 6. Future Considerations
 
-### Network Scanner: python-nmap Implementation
-
-- Uses `python-nmap` to execute TCP/UDP scans efficiently.
-    
-- Processes scan results and stores them in JSON format.
-    
-- Designed for modular expansion with future features like stealth scanning.
-    
-
-### Network Scanner: Stealth Enhancements with python-nmap
-
-A specialized scanner subclass adds stealth options:
-
-- **Decoy Scans** – Use random IPs or user-defined lists.
-    
-- **Fragmentation** – Break packets into small segments.
-    
-- **Idle Scans** – Route scans via a zombie host.
-    
-- **Timing Adjustments** – Change scan speeds.
-    
-- **Source Port Spoofing** – Impersonate well-known ports.
-    
-- **TTL Variation** – Mimic different OS behaviors.
-    
-
-These options are combined into a command string passed to nmap for execution.
-
-### Logging & Reporting
-
-- ScanLogger records results in three formats: JSON, plain text, and Markdown.
-    
-- Logs are stored in a date-based directory structure for easy organization.
-    
-
-### UI Integration
-
-- The UI module, `ui.py`, uses the `Rich` library for an interactive experience.
-    
-- Features include:
-    
-    - User prompt for target IP(s).
-        
-    - Progress bar during scanning.
-        
-    - Tabular display of scan results.
-        
-    - Integration with ScanLogger for persistent logs.
-        
-
-### Asynchronous Scanning
-
-- The scanner supports asynchronous operations.
-    
-- `async_scan_target` wraps the blocking `scan_target` method using `asyncio`.
-    
-- Multiple scans can be run in parallel for efficiency.
-    
-
-### Enhanced Error Handling & Logging
-
-- Uses Python’s logging module to replace print statements.
-    
-- Logs key events, errors, and exceptions for easier debugging.
-    
-- Ensures scan failures and anomalies are recorded systematically.
+- **Maintenance:**  
+  Regular updates will be required to adjust vulnerability thresholds as new stable versions are released.
+- **Extensibility:**  
+  The design is modular, enabling further enhancements such as dynamic threshold updates from external vulnerability feeds or integration with additional scanning protocols.
+- **Documentation Updates:**  
+  Further documentation, including a full code walkthrough and ADR revisions, has been maintained in the respective files to ensure clarity on design decisions.

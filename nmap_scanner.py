@@ -11,19 +11,29 @@ logging.basicConfig(
 )
 
 class NmapScanner:
-    def __init__(self, scan_arguments='-sS'):
+    def __init__(self, scan_arguments='-sS -sV -O'):
         # Initialise the python-nmap scanner
         self.nm = nmap.PortScanner()
         self.scan_arguments = scan_arguments
 
     def scan_target(self, target, ports="1-1024"):
-        """
-        Execute an nmap scan on the given target over specified ports.
-        Returns a dict with scan results.
-        """
         try:
             self.nm.scan(target, ports, arguments=self.scan_arguments)
-            return self.nm[target]
+            result = self.nm[target]
+
+            # Process OS detection results (if further processing is needed)
+            osmatches = result.get('osmatch', [])
+
+            # Process TCP service details for potential internal checks
+            tcp_data = result.get('tcp', {})
+            for port, port_info in tcp_data.items():
+                service_name = port_info.get('name', '')
+                service_version = port_info.get('version', '')
+                product = port_info.get('product', '')
+                # Additional processing can be done here
+
+            return result
+
         except Exception as e:
             logging.exception("Scan error for target %s: %s", target, e)
             return None
