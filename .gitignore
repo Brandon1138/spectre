@@ -2,3 +2,4 @@ logs/
 .venv/
 venv/
 __pycache__/
+.idea/
